@@ -1,30 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Zadatak_1
 {
     class Program
     {
+        /// <summary>
+        /// File with paper colors
+        /// </summary>
         public static string colorsFile = @"../../Paleta.txt";
+        /// <summary>
+        /// List of paper colors
+        /// </summary>
         public static List<string> colors = new List<string>() { "red", "blue", "white", "yellow", "green", "orange", "violet" };
-               
+        /// <summary>
+        /// Array of paper formats
+        /// </summary>        
         public static string[] format = new string[] { "A3", "A4" };
+        /// <summary>
+        /// array with paper orientation
+        /// </summary>
         public static string[] orientation = new string[] { "portrait", "landscape" };
-        //public static Random rnd = new Random();
-        static object locker = new object();
+        /// <summary>
+        /// Computer names list
+        /// </summary>
+        public static List<string> comps = new List<string>();
+
+        /// <summary>
+        /// object for random selection
+        /// </summary>
+        public static Random rnd = new Random();
+        
+        //objects for locking printers
         static object locker1 = new object();
         static object locker2 = new object();
-
-        static AutoResetEvent event1 = new AutoResetEvent(false);
-        static SemaphoreSlim a3semaphore = new SemaphoreSlim(1);
-        static SemaphoreSlim a4semaphore = new SemaphoreSlim(1);
-
-        static CountdownEvent countdown = new CountdownEvent(10);
+                
+        static AutoResetEvent event1 = new AutoResetEvent(true);
+        static AutoResetEvent event2 = new AutoResetEvent(true);        
 
         /// <summary>
         /// Method for writing paper colors in file
@@ -46,10 +60,8 @@ namespace Zadatak_1
         /// </summary>
         /// <returns>string value for paper format</returns>
         public static string SelectPaperFormat()
-        {
-            Random rnd = new Random();
-            string selectedFormat = (format[rnd.Next(format.Length)]);
-            Console.WriteLine(selectedFormat);
+        {            
+            string selectedFormat = (format[rnd.Next(format.Length)]);            
             return selectedFormat;
         }
 
@@ -59,10 +71,8 @@ namespace Zadatak_1
         /// <returns>string value for paper color</returns>
         public static string SelectPaperColor()
         {
-            string[] allLines = File.ReadAllLines(colorsFile);
-            Random rnd = new Random();
-            string selectedColor = allLines[rnd.Next(allLines.Length)];
-            Console.WriteLine(selectedColor);
+            string[] allLines = File.ReadAllLines(colorsFile);            
+            string selectedColor = allLines[rnd.Next(allLines.Length)];            
             return selectedColor;
         }
 
@@ -71,10 +81,8 @@ namespace Zadatak_1
         /// </summary>
         /// <returns>paper orientation</returns>
         public static string SelectOrientation()
-        {
-            Random rnd = new Random();
-            string selectedOrientation = (orientation[rnd.Next(orientation.Length)]);
-            Console.WriteLine(selectedOrientation);
+        {            
+            string selectedOrientation = (orientation[rnd.Next(orientation.Length)]);            
             return selectedOrientation;
         }
 
@@ -83,153 +91,103 @@ namespace Zadatak_1
         /// </summary>
         public static void A3Printing()
         {
-            lock (locker)
-            {
-                a3semaphore.Wait();
+            //printer is locked so that only one by one computer can print document on it
+            lock (locker1)
+            {                
                 Console.WriteLine("Document for " + Thread.CurrentThread.Name + " is printing...");
                 Thread.Sleep(1000);
-                Console.WriteLine(Thread.CurrentThread.Name + " can pick up A3 document.");
-                a3semaphore.Release();
-                countdown.Signal();
+                Console.WriteLine(Thread.CurrentThread.Name + " can pick up A3 document.");                
             }
+
         }
 
         /// <summary>
         /// Method for A4 printer which prints A4 format documents
         /// </summary>
-        public static void A4Pringing()
+        public static void A4Printing()
         {
-            lock (locker1)
-            {
-                a4semaphore.Wait();
+            //printer is locked so that only one by one computer can print document on it
+            lock (locker2)
+            {                
                 Console.WriteLine("Document for " + Thread.CurrentThread.Name + " is printing...");
                 Thread.Sleep(1000);
-                Console.WriteLine(Thread.CurrentThread.Name + " can pick up A4 document.");
-                a4semaphore.Release();
-                countdown.Signal();
-            }
-        }
+                Console.WriteLine(Thread.CurrentThread.Name + " can pick up A4 document.");                
+            }            
+        }       
 
         /// <summary>
         /// Method for simulating printing
         /// </summary>
         public static void Printing()
         {
-            //selecting random paper format
-            string selectedFormat = SelectPaperFormat();
-            //selecting random paper color from file
-            string selectedColor = SelectPaperColor();
-            //select random orientation
-            string selectedOrientation = SelectOrientation();
+            while(comps.Count<10)
+            {
+                var computer = Thread.CurrentThread.Name;
+                //selecting random paper format
+                string selectedFormat = SelectPaperFormat();
+                //selecting random paper color from file
+                string selectedColor = SelectPaperColor();
+                //select random orientation
+                string selectedOrientation = SelectOrientation();
+
+                //message that print request is sent
+                Console.WriteLine(computer + " sent request for printing " + selectedFormat + " format document. Color: " +
+                                   selectedColor + ". Orientation: " + selectedOrientation);
+
+                //if selected format is A3, then send print request to A3 printer by calling method A3Printing
+                if (selectedFormat == "A3")
+                {
+                    event1.WaitOne();                    
+                    if (comps.Count==10)
+                    {
+                        return;
+                        
+                    }
+                    A3Printing();
+                    event1.Set();
+                }
+                //if selected format is A4, then send print request to A4 printer by calling method A4Printing
+                else
+                {                   
+                    event2.WaitOne();  
+                    if (comps.Count == 10)
+                    {
+                        return;
+                    }
+                    A4Printing();
+                    event2.Set();
+                }
+                //add computer that printed if not already added in list of computers
+                if(!comps.Contains(Thread.CurrentThread.Name))
+                {
+                    comps.Add(Thread.CurrentThread.Name);
+                }
+            }                     
             
-
-            Console.WriteLine(Thread.CurrentThread.Name + " sent request for printing " + selectedFormat + " format. Color: " +
-                        selectedColor + ". Orientation: " + selectedOrientation);
-            event1.Set();
-            Thread.Sleep(100);
-
-            event1.WaitOne();
-            if (selectedFormat == "A3")
-            {
-                
-            }
-            else
-            {
-                
-            }
-            //lock (locker2)
-            //{
-            //    if (countdown.CurrentCount == 0)
-            //    {
-            //        countdown.Signal();
-            //    }
-            //}
-            //Thread.Sleep(1000);
-
         }
-
-        //public static void PrintRequest()
-        //{
-        //    Console.WriteLine("Please select paper format A3 or A4:");
-        //    selectedFormat = (format[rnd.Next(format.Length)]);
-        //    Console.WriteLine(selectedFormat + "\n");
-        //    //SelectPaperFormat();
-        //    Console.WriteLine("What paper color do you want to print on?");
-        //    string[] allLines = File.ReadAllLines(colorsFile);
-        //    selectedColor = allLines[rnd.Next(allLines.Length)];
-        //    Console.WriteLine(selectedColor + "\n");
-        //    //SelectPaperColor();
-        //    Console.WriteLine("Select paper orientation (landscape/portrait)");
-        //    selectedOrientation = (orientation[rnd.Next(orientation.Length)]);
-        //    Console.WriteLine(selectedOrientation + "\n");
-
-        //    Console.WriteLine(Thread.CurrentThread.Name + " sent request for printing " + selectedFormat + " format. Color: " +
-        //                selectedColor + ". Orientation: " + selectedOrientation+"\nDocument is printing...\n");           
-        //    event1.Set();
-        //    Thread.Sleep(100);
-
-        //    event1.WaitOne();
-        //    if (selectedFormat == "A3")
-        //    {
-        //        lock (locker)
-        //        {
-        //            if (countdown.CurrentCount > 0)
-        //            {
-        //                Console.WriteLine(Thread.CurrentThread.Name + " can pick up " + selectedFormat + " document.");
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        lock (locker1)
-        //        {
-        //            if (countdown.CurrentCount > 0)
-        //            {
-        //                Console.WriteLine(Thread.CurrentThread.Name + " can pick up " + selectedFormat + " document.");
-        //            }
-        //        }
-        //    }
-        //    lock (locker2)
-        //    {
-        //        if (countdown.CurrentCount == 0)
-        //        {
-        //            countdown.Signal();
-        //        }
-        //    }
-        //    Thread.Sleep(1000);         
-
-            
-
-
+                
         static void Main(string[] args)
         {
-            WriteColors();
-            
-            Thread[] computers = new Thread[10];
-            for (int i = 0; i < computers.Length; i++)
+            //first starting thread for writing paper colors in file
+            Thread writeColors = new Thread (()=> WriteColors())
             {
-                computers[i] = new Thread(Printing)
+                Name="write_colors"
+            };
+            writeColors.Start();            
+            writeColors.Join();            
+            
+            //creating and starting computer threads
+            for (int i = 0; i < 10; i++)
+            {
+                Thread thread = new Thread(Printing)
                 {
                     //naming each thread
                     Name = String.Format("Computer_{0}", i + 1)
-                };
-                computers[i].Start();
+                };                
+                thread.Start();                
             }
-
-            //while (countdown.CurrentCount>0)
-            //{
-            //    for(int i=0;i<10;i++)
-            //    {
-            //        if(!computers[i].IsAlive)
-            //        {
-            //            string comp = computers[i].Name;
-            //            computers[i] = new Thread(() => PrintRequest());
-            //            computers[i].Name = comp;
-            //            computers[i].Start();
-            //        }
-            //    }
-            //}
-            Console.ReadLine();
+            
+            Console.ReadKey();
 
         }
     }
