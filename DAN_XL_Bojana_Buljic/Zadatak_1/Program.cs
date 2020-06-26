@@ -41,6 +41,10 @@ namespace Zadatak_1
             }
         }
 
+        /// <summary>
+        /// Method for random selection of paper format
+        /// </summary>
+        /// <returns>string value for paper format</returns>
         public static string SelectPaperFormat()
         {
             Random rnd = new Random();
@@ -49,6 +53,10 @@ namespace Zadatak_1
             return selectedFormat;
         }
 
+        /// <summary>
+        /// Method for random selection of paper color from file
+        /// </summary>
+        /// <returns>string value for paper color</returns>
         public static string SelectPaperColor()
         {
             string[] allLines = File.ReadAllLines(colorsFile);
@@ -58,13 +66,48 @@ namespace Zadatak_1
             return selectedColor;
         }
 
+        /// <summary>
+        /// Method for random selection of paper orientation
+        /// </summary>
+        /// <returns>paper orientation</returns>
         public static string SelectOrientation()
         {
-
             Random rnd = new Random();
             string selectedOrientation = (orientation[rnd.Next(orientation.Length)]);
             Console.WriteLine(selectedOrientation);
             return selectedOrientation;
+        }
+
+        /// <summary>
+        /// Method for A3 printer which prints A3 format documents
+        /// </summary>
+        public static void A3Printing()
+        {
+            lock (locker)
+            {
+                a3semaphore.Wait();
+                Console.WriteLine("Document for " + Thread.CurrentThread.Name + " is printing...");
+                Thread.Sleep(1000);
+                Console.WriteLine(Thread.CurrentThread.Name + " can pick up A3 document.");
+                a3semaphore.Release();
+                countdown.Signal();
+            }
+        }
+
+        /// <summary>
+        /// Method for A4 printer which prints A4 format documents
+        /// </summary>
+        public static void A4Pringing()
+        {
+            lock (locker1)
+            {
+                a4semaphore.Wait();
+                Console.WriteLine("Document for " + Thread.CurrentThread.Name + " is printing...");
+                Thread.Sleep(1000);
+                Console.WriteLine(Thread.CurrentThread.Name + " can pick up A4 document.");
+                a4semaphore.Release();
+                countdown.Signal();
+            }
         }
 
         /// <summary>
@@ -88,27 +131,11 @@ namespace Zadatak_1
             event1.WaitOne();
             if (selectedFormat == "A3")
             {
-                lock (locker)
-                {
-                    a3semaphore.Wait();
-                    Console.WriteLine("Document for "+Thread.CurrentThread.Name+" is printing...");
-                    Thread.Sleep(1000);
-                    Console.WriteLine(Thread.CurrentThread.Name + " can pick up " + selectedFormat + " document.");
-                    a3semaphore.Release();
-                    countdown.Signal();
-                }
+                
             }
             else
             {
-                lock (locker1)
-                {
-                    a4semaphore.Wait();
-                    Console.WriteLine("Document for " + Thread.CurrentThread.Name + " is printing...");
-                    Thread.Sleep(1000);
-                    Console.WriteLine(Thread.CurrentThread.Name + " can pick up " + selectedFormat + " document.");
-                    a4semaphore.Release();
-                    countdown.Signal();
-                }
+                
             }
             //lock (locker2)
             //{
