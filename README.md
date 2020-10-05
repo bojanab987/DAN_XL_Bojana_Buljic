@@ -1,1 +1,3 @@
-# DAN_XL_Bojana_Buljic
+Console app for simulation paper printing.
+
+Use of locks and AutoResetEvent
